@@ -1,0 +1,25 @@
+# Tests
+tests/
+*.test.ts
+*.spec.ts
+
+# Source files (already compiled to dist)
+src/
+
+# Configs (development only)
+tsconfig.json
+.eslintrc.*
+
+# CI/CD
+.github/
+.gitlab-ci.yml
+
+# Debug
+node_modules/
+
+# Examples (optional)
+examples/
+
+# Git
+.git
+.gitignore
