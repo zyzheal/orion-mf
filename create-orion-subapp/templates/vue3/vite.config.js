@@ -5,9 +5,7 @@ export default defineConfig({
   plugins: [vue()],
   server: {
     port: 3001,
-    headers: {
-      'Access-Control-Allow-Origin': '*',
-    },
+    cors: true,
   },
   build: {
     target: 'esnext',

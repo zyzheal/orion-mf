@@ -10,11 +10,13 @@ export async function bootstrap() {
   console.log('[{{PROJECT_NAME}}] bootstrap');
 }
 
+let root = null;
+
 export async function mount(props) {
   const { container } = props;
   console.log('[{{PROJECT_NAME}}] mount', props);
 
-  const root = ReactDOM.createRoot(container);
+  root = ReactDOM.createRoot(container);
   root.render(
     <React.StrictMode>
       <App {...props} />
@@ -28,7 +30,10 @@ export async function unmount(props) {
   const { container } = props;
   console.log('[{{PROJECT_NAME}}] unmount', props);
 
-  ReactDOM.createRoot(container).unmount();
+  if (root) {
+    root.unmount();
+    root = null;
+  }
 }
 
 // 开发环境直接挂载

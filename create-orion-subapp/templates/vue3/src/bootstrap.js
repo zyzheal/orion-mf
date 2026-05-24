@@ -9,21 +9,25 @@ export async function bootstrap() {
   console.log('[{{PROJECT_NAME}}] bootstrap');
 }
 
+let app = null;
+
 export async function mount(props) {
   const { container } = props;
   console.log('[{{PROJECT_NAME}}] mount', props);
 
-  const app = createApp(App);
+  app = createApp(App);
   app.mount(container);
 
   return app;
 }
 
 export async function unmount(props) {
-  const { container } = props;
   console.log('[{{PROJECT_NAME}}] unmount', props);
 
-  container.innerHTML = '';
+  if (app) {
+    app.unmount();
+    app = null;
+  }
 }
 
 // 开发环境直接挂载

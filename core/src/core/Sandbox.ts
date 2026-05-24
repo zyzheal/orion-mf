@@ -554,6 +554,11 @@ export class Sandbox implements SandBox {
           return undefined;
         }
 
+        // Block denylisted properties (eval, Function, alert, etc.)
+        if (DENYLIST.has(p)) {
+          return undefined;
+        }
+
         // Handle Symbol.unscopables for 'with' statement compatibility
         if (p === Symbol.unscopables) {
           return UNSCOPABLES;
@@ -587,11 +592,6 @@ export class Sandbox implements SandBox {
         // Return native document
         if (p === 'document') {
           return globalContext.document;
-        }
-
-        // Return eval (blocked but accessible for compatibility)
-        if (p === 'eval') {
-          return globalContext.eval;
         }
 
         // Determine the value source

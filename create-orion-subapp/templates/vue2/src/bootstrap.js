@@ -9,11 +9,13 @@ export async function bootstrap() {
   console.log('[{{PROJECT_NAME}}] bootstrap');
 }
 
+let instance = null;
+
 export async function mount(props) {
   const { container } = props;
   console.log('[{{PROJECT_NAME}}] mount', props);
 
-  const instance = new Vue({
+  instance = new Vue({
     render: (h) => h(App, { props }),
   }).$mount(container);
 
@@ -21,10 +23,12 @@ export async function mount(props) {
 }
 
 export async function unmount(props) {
-  const { container } = props;
   console.log('[{{PROJECT_NAME}}] unmount', props);
 
-  container.innerHTML = '';
+  if (instance) {
+    instance.$destroy();
+    instance = null;
+  }
 }
 
 // 开发环境直接挂载
