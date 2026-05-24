@@ -30,6 +30,11 @@ export async function createApp(projectName, options = {}) {
     options.template = await promptTemplate();
   }
 
+  // 校验模板名称
+  if (!TEMPLATES[options.template]) {
+    throw new Error(`未知的模板 "${options.template}"，可选: ${Object.keys(TEMPLATES).join(', ')}`);
+  }
+
   const targetDir = path.resolve(process.cwd(), projectName);
 
   // 检查目录是否存在
@@ -130,12 +135,21 @@ function copyTemplate(srcDir, destDir, projectName, options) {
       fs.mkdirSync(destPath, { recursive: true });
       copyTemplate(srcPath, destPath, projectName, options);
     } else {
-      // 读取文件内容并替换占位符
-      let content = fs.readFileSync(srcPath, 'utf-8');
-      content = content.replace(/\{\{PROJECT_NAME\}\}/g, projectName);
-      content = content.replace(/\{\{TEMPLATE\}\}/g, options.template);
+      // 检测二进制文件，跳过文本替换
+      let content = fs.readFileSync(srcPath);
 
-      fs.writeFileSync(destPath, content);
+      // 简单的二进制检测：如果包含 null 字节则认为是二进制
+      if (content.includes('\0')) {
+        fs.copyFileSync(srcPath, destPath);
+        return;
+      }
+
+      // 读取文件内容并替换占位符
+      let text = content.toString('utf-8');
+      text = text.replace(/\{\{PROJECT_NAME\}\}/g, projectName);
+      text = text.replace(/\{\{TEMPLATE\}\}/g, options.template);
+
+      fs.writeFileSync(destPath, text);
     }
   }
 }

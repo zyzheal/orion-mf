@@ -9,7 +9,12 @@
  * - 主应用 → 子应用：认证状态、主题、菜单、权限等下发
  * - 子应用 → 主应用：导航请求、错误上报、状态反馈等
  * - 支持 owner 追踪，自动清理过期监听器
+ *
+ * 实现：基于 EventBus Channel，不再重复实现 listeners/ownerHandlers 逻辑
  */
+
+import { EventBus, eventBus } from './EventBus';
+import type { EventBusHandler, EventBusPayload } from './EventBus';
 
 export type OrionBusEventType =
   // 主应用 → 子应用
@@ -40,138 +45,107 @@ export interface OrionBusPayload {
 export type OrionBusHandler = (payload: OrionBusPayload) => void;
 
 // ============================================
-// 内部实现
+// 内部实现 — 基于 EventBus Channel
 // ============================================
 
-class OrionBusImpl {
-  private listeners = new Map<string, Set<OrionBusHandler>>();
-  private ownerHandlers = new Map<string, Set<OrionBusHandler>>();
+const ORION_CHANNEL_KEY = '__orion_bus__';
 
-  /**
-   * 订阅事件
-   * @param type 事件类型
-   * @param handler 处理函数
-   * @param owner 可选的所有者标识，用于批量清理
-   * @returns 取消订阅函数
-   */
-  on(type: OrionBusEventType, handler: OrionBusHandler, owner?: string): () => void {
-    if (!this.listeners.has(type)) {
-      this.listeners.set(type, new Set());
-    }
-    this.listeners.get(type)!.add(handler);
-
-    if (owner) {
-      if (!this.ownerHandlers.has(owner)) {
-        this.ownerHandlers.set(owner, new Set());
-      }
-      this.ownerHandlers.get(owner)!.add(handler);
-    }
-
-    return () => this.off(type, handler);
-  }
-
-  /**
-   * 取消订阅
-   */
-  off(type: OrionBusEventType, handler: OrionBusHandler): void {
-    this.listeners.get(type)?.delete(handler);
-  }
-
-  /**
-   * 发布事件
-   */
-  emit(type: OrionBusEventType, data: Record<string, any> = {}, options?: { source?: 'main' | 'subapp'; appKey?: string }): void {
-    const payload: OrionBusPayload = {
-      type,
-      data,
-      source: options?.source || 'main',
-      appKey: options?.appKey,
-      timestamp: Date.now(),
-    };
-
-    const handlers = this.listeners.get(type);
-    if (!handlers) return;
-
-    for (const handler of handlers) {
-      try {
-        handler(payload);
-      } catch (e) {
-        console.error(`[OrionBus] Handler error for "${type}":`, e);
-      }
-    }
-  }
-
-  /**
-   * 按所有者批量清理
-   */
-  clearByOwner(owner: string): void {
-    const handlers = this.ownerHandlers.get(owner);
-    if (!handlers) return;
-
-    for (const handler of handlers) {
-      for (const listenerSet of this.listeners.values()) {
-        listenerSet.delete(handler);
-      }
-    }
-    this.ownerHandlers.delete(owner);
-  }
-
-  /**
-   * 清空所有监听
-   */
-  clear(): void {
-    this.listeners.clear();
-    this.ownerHandlers.clear();
-  }
+/**
+ * Get the internal Orion channel (created once via EventBus).
+ */
+function getChannel() {
+  return eventBus.createChannel(ORION_CHANNEL_KEY);
 }
-
-// 全局单例
-const globalBus = new OrionBusImpl();
 
 // ============================================
 // 便捷方法
 // ============================================
 
 /**
+ * 订阅事件
+ */
+export function on(type: OrionBusEventType, handler: OrionBusHandler, owner?: string): () => void {
+  return getChannel().on(type, (payload: EventBusPayload) => {
+    handler(payload.data as OrionBusPayload);
+  }, owner);
+}
+
+/**
+ * 取消订阅
+ */
+export function off(type: OrionBusEventType, handler: OrionBusHandler): void {
+  getChannel().off(type, handler);
+}
+
+/**
+ * 发布事件
+ */
+export function emit(type: OrionBusEventType, data: Record<string, any> = {}, options?: { source?: 'main' | 'subapp'; appKey?: string }): void {
+  const payload: OrionBusPayload = {
+    type,
+    data,
+    source: options?.source || 'main',
+    appKey: options?.appKey,
+    timestamp: Date.now(),
+  };
+
+  getChannel().emit(type, payload);
+}
+
+/**
+ * 按所有者批量清理
+ */
+export function clearByOwner(owner: string): void {
+  EventBus.getInstance().cleanupByOwner(owner);
+}
+
+/**
+ * 清空所有监听
+ */
+export function clear(): void {
+  EventBus.getInstance().removeChannel(ORION_CHANNEL_KEY);
+}
+
+/**
  * 主应用 → 子应用：注入认证状态
  */
 export function emitAuthState(auth: { token: string; tenantId?: string; user?: any }): void {
-  globalBus.emit('orionAuth', auth, { source: 'main' });
+  emit('orionAuth', auth, { source: 'main' });
 }
 
 /**
  * 主应用 → 子应用：触发退出登录
  */
 export function emitLogout(): void {
-  globalBus.emit('orionLogout', {}, { source: 'main' });
+  emit('orionLogout', {}, { source: 'main' });
 }
 
 /**
  * 子应用 → 主应用：请求导航
  */
 export function emitNavigate(path: string, appKey?: string): void {
-  globalBus.emit('subappNavigate', { path }, { source: 'subapp', appKey });
+  emit('subappNavigate', { path }, { source: 'subapp', appKey });
 }
 
 /**
  * 子应用 → 主应用：上报错误
  */
 export function emitError(appKey: string, error: Error | string): void {
-  globalBus.emit('subappError', { appKey, error: error instanceof Error ? error.message : error }, { source: 'subapp', appKey });
+  emit('subappError', { appKey, error: error instanceof Error ? error.message : error }, { source: 'subapp', appKey });
 }
 
 /**
  * 子应用 → 主应用：通知已就绪
  */
 export function emitReady(appKey: string, duration?: number): void {
-  globalBus.emit('subappReady', { appKey, duration }, { source: 'subapp', appKey });
+  emit('subappReady', { appKey, duration }, { source: 'subapp', appKey });
 }
 
 /**
  * 子应用 → 主应用：请求认证
  */
 export function emitNeedAuth(appKey: string): void {
-  globalBus.emit('subappNeedAuth', { appKey }, { source: 'subapp', appKey });
+  emit('subappNeedAuth', { appKey }, { source: 'subapp', appKey });
 }
 
 // ============================================
@@ -179,14 +153,14 @@ export function emitNeedAuth(appKey: string): void {
 // ============================================
 
 /**
- * 获取底层 EventBus 实例（用于高级用法）
+ * 获取底层通信接口（用于高级用法）
  */
 export const orionBus = {
-  on: globalBus.on.bind(globalBus),
-  off: globalBus.off.bind(globalBus),
-  emit: globalBus.emit.bind(globalBus),
-  clearByOwner: globalBus.clearByOwner.bind(globalBus),
-  clear: globalBus.clear.bind(globalBus),
+  on,
+  off,
+  emit,
+  clearByOwner,
+  clear,
 };
 
 export type OrionBusInstance = typeof orionBus;

@@ -21,6 +21,9 @@ export interface CacheEntry {
   container: HTMLElement | null;
 }
 
+/** Pending load promises to prevent cache stampede */
+type PendingLoads = Map<string, Promise<boolean>>;
+
 export interface SubAppCacheOptions {
   maxSize?: number;
   ttl?: number;
@@ -39,6 +42,8 @@ export interface SubAppCacheOptions {
 export class SubAppCache {
   private cache = new Map<string, CacheEntry>();
   private config: CacheConfig;
+  private pendingLoads: PendingLoads = new Map();
+  private cleanupTimer: ReturnType<typeof setInterval> | null = null;
 
   constructor(options: SubAppCacheOptions = {}) {
     this.config = {
@@ -46,6 +51,40 @@ export class SubAppCache {
       ttl: options.ttl ?? 0,
       defaultMode: options.defaultMode ?? 'keep-alive',
     };
+
+    // Start periodic TTL cleanup if TTL is configured
+    if (this.config.ttl > 0) {
+      this.startTTLCleanup();
+    }
+  }
+
+  /**
+   * Start periodic TTL cleanup interval
+   * Runs every 60 seconds to expire stale cache entries
+   */
+  private startTTLCleanup(): void {
+    this.cleanupTimer = setInterval(() => {
+      this.expireStale();
+    }, 60_000);
+
+    // Unref timer to prevent keeping Node.js process alive
+    if (typeof (this.cleanupTimer as any).unref === 'function') {
+      (this.cleanupTimer as any).unref();
+    }
+  }
+
+  /**
+   * Expire all stale cache entries
+   */
+  private expireStale(): void {
+    if (this.config.ttl <= 0) return;
+
+    const now = Date.now();
+    for (const [key, entry] of this.cache) {
+      if (now - entry.timestamp > this.config.ttl) {
+        this.purge(key);
+      }
+    }
   }
 
   /**
@@ -109,13 +148,30 @@ export class SubAppCache {
    * @param remount - 重新挂载函数（full-unmount 模式需要）
    * @returns 是否恢复成功
    */
+  /**
+   * Restore a cached sub-app with cache stampede protection.
+   *
+   * If a restore is already in progress for this key, returns the same promise.
+   * This prevents multiple concurrent requests for the same key from triggering
+   * multiple loads (cache stampede / cache penetration).
+   *
+   * @param key - 子应用标识
+   * @param remount - 重新挂载函数（full-unmount 模式需要）
+   * @returns 是否恢复成功
+   */
   async restore(key: string, remount?: () => Promise<void>): Promise<boolean> {
+    // If already loading, return the same promise to prevent stampede
+    const pending = this.pendingLoads.get(key);
+    if (pending) {
+      return pending;
+    }
+
     const entry = this.cache.get(key);
     if (!entry) {
       return false;
     }
 
-    // 检查 TTL 过期
+    // Check TTL expiration
     if (this.config.ttl > 0 && Date.now() - entry.timestamp > this.config.ttl) {
       await this.purge(key);
       return false;
@@ -137,12 +193,22 @@ export class SubAppCache {
       this.cache.delete(key);
       return false;
     }
-    await remount();
-    entry.timestamp = Date.now();
-    // 更新缓存顺序（LRU）
-    this.cache.delete(key);
-    this.cache.set(key, entry);
-    return true;
+
+    // Create pending load promise to prevent stampede
+    const loadPromise = remount().then(() => {
+      entry.timestamp = Date.now();
+      this.cache.delete(key);
+      this.cache.set(key, entry);
+      this.pendingLoads.delete(key);
+      return true;
+    }).catch(() => {
+      this.pendingLoads.delete(key);
+      this.cache.delete(key);
+      return false;
+    });
+
+    this.pendingLoads.set(key, loadPromise);
+    return loadPromise;
   }
 
   /**
