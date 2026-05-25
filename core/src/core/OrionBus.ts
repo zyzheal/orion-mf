@@ -51,10 +51,36 @@ export type OrionBusHandler = (payload: OrionBusPayload) => void;
 const ORION_CHANNEL_KEY = '__orion_bus__';
 
 /**
+ * Map to track original handler → wrapped handler for proper off() support.
+ */
+const handlerMap = new WeakMap<OrionBusHandler, Map<OrionBusEventType, EventBusHandler>>();
+
+/**
  * Get the internal Orion channel (created once via EventBus).
+ * Uses EventBus.getChannel() to get the internal Channel (not ChannelPublicAPI)
+ * which exposes emit() and clearByOwner().
  */
 function getChannel() {
   return eventBus.createChannel(ORION_CHANNEL_KEY);
+}
+
+/**
+ * Get the internal Orion channel instance with full API access.
+ */
+function getChannelInternal() {
+  return EventBus.getInstance().getChannel(ORION_CHANNEL_KEY);
+}
+
+/**
+ * Get or create the handler map entry for a given handler.
+ */
+function getHandlerMapEntry(handler: OrionBusHandler): Map<OrionBusEventType, EventBusHandler> {
+  let entry = handlerMap.get(handler);
+  if (!entry) {
+    entry = new Map();
+    handlerMap.set(handler, entry);
+  }
+  return entry;
 }
 
 // ============================================
@@ -65,16 +91,25 @@ function getChannel() {
  * 订阅事件
  */
 export function on(type: OrionBusEventType, handler: OrionBusHandler, owner?: string): () => void {
-  return getChannel().on(type, (payload: EventBusPayload) => {
+  const wrapped: EventBusHandler = (payload: EventBusPayload) => {
     handler(payload.data as OrionBusPayload);
-  }, owner);
+  };
+
+  getHandlerMapEntry(handler).set(type, wrapped);
+
+  return getChannel().on(type, wrapped, owner);
 }
 
 /**
  * 取消订阅
  */
 export function off(type: OrionBusEventType, handler: OrionBusHandler): void {
-  getChannel().off(type, handler);
+  const entry = handlerMap.get(handler);
+  const wrapped = entry?.get(type);
+  if (wrapped && entry) {
+    getChannel().off(type, wrapped);
+    entry.delete(type);
+  }
 }
 
 /**
@@ -89,14 +124,14 @@ export function emit(type: OrionBusEventType, data: Record<string, any> = {}, op
     timestamp: Date.now(),
   };
 
-  getChannel().emit(type, payload);
+  getChannelInternal()?.emit(type, payload);
 }
 
 /**
- * 按所有者批量清理
+ * 按所有者批量清理（仅清理 OrionBus 的 Channel）
  */
 export function clearByOwner(owner: string): void {
-  EventBus.getInstance().cleanupByOwner(owner);
+  getChannelInternal()?.clearByOwner(owner);
 }
 
 /**

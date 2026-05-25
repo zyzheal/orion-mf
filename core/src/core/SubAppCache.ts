@@ -59,6 +59,17 @@ export class SubAppCache {
   }
 
   /**
+   * Destroy the cache instance and stop periodic cleanup.
+   * Call this when the cache is no longer needed (e.g., HMR, tests).
+   */
+  destroy(): void {
+    if (this.cleanupTimer) {
+      clearInterval(this.cleanupTimer);
+      this.cleanupTimer = null;
+    }
+  }
+
+  /**
    * Start periodic TTL cleanup interval
    * Runs every 60 seconds to expire stale cache entries
    */

@@ -141,7 +141,7 @@ function copyTemplate(srcDir, destDir, projectName, options) {
       // 简单的二进制检测：如果包含 null 字节则认为是二进制
       if (content.includes('\0')) {
         fs.copyFileSync(srcPath, destPath);
-        return;
+        continue;
       }
 
       // 读取文件内容并替换占位符
