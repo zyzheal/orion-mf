@@ -9,6 +9,7 @@ import { Sandbox, GlobalWrapper, SandboxProxy } from './Sandbox';
 import { StyleIsolator } from './StyleIsolator';
 import { ErrorIsolator } from './ErrorIsolator';
 import { GlobalStyleCache } from './GlobalStyleCache';
+import { logger } from './logger';
 import type { IStyleIsolator, CSSIsolationMode } from './interface';
 
 // ============================================================================
@@ -120,7 +121,7 @@ class DefaultMFLoader implements MFLoader {
       this.moduleCache.set(cacheKey, modules);
       return modules;
     } catch (error) {
-      console.error(`[orion-mf] Failed to load remote module: ${remoteEntry}`, error);
+      logger.error('MFSandboxBridge', `Failed to load remote module: ${remoteEntry}`, error);
       throw error;
     }
   }
@@ -225,22 +226,22 @@ export class MFSandboxBridge {
   async loadSubApp(config: SubAppConfig): Promise<SubAppInstance> {
     const { key, name, remoteEntry, remoteName, noShadowDOM, cssIsolation, errorBoundary, props } = config;
 
-    console.log(`[orion-mf] loadSubApp called for "${key}" with props:`, props);
+    logger.info('MFSandboxBridge', `loadSubApp called for "${key}"`, { props });
 
     // Check if already loaded
     if (this.instances.has(key)) {
-      console.warn(`[orion-mf] Sub-app "${key}" already loaded, returning existing instance`);
+      logger.warn('MFSandboxBridge', `Sub-app "${key}" already loaded, returning existing instance`);
       return this.instances.get(key)!;
     }
 
-    console.info(`[orion-mf] Loading sub-app: ${name} (${key})`);
+    logger.info('MFSandboxBridge', `Loading sub-app: ${name} (${key})`);
 
     // Step 1: Load remote modules via Module Federation
     let remoteModules: RemoteModule[];
     try {
       remoteModules = await this.mfLoader.load(remoteEntry, remoteName);
     } catch (error) {
-      console.error(`[orion-mf] Failed to load remote modules for "${key}":`, error);
+      logger.error('MFSandboxBridge', `Failed to load remote modules for "${key}"`, error);
       throw error;
     }
 
@@ -256,7 +257,7 @@ export class MFSandboxBridge {
     let errorCallback: ((error: Error) => void) | undefined;
     if (errorBoundary) {
       errorCallback = (error: Error) => {
-        console.error(`[orion-mf] Error in sub-app "${key}":`, error);
+        logger.error('MFSandboxBridge', `Error in sub-app "${key}"`, error);
         // Trigger crash recovery if available
       };
       this.errorIsolator.setup(key, errorCallback);
@@ -273,7 +274,7 @@ export class MFSandboxBridge {
         root = this.mountToShadowDOM(key, lifecycle, cssIsolation, props);
       }
     } catch (error) {
-      console.error(`[orion-mf] Failed to mount sub-app "${key}":`, error);
+      logger.error('MFSandboxBridge', `Failed to mount sub-app "${key}"`, error);
       // Cleanup sandbox on mount failure
       this.cleanupSubApp(key);
       throw error;
@@ -290,7 +291,7 @@ export class MFSandboxBridge {
 
     this.instances.set(key, instance);
 
-    console.info(`[orion-mf] Sub-app loaded: ${name} (${key})`);
+    logger.info('MFSandboxBridge', `Sub-app loaded: ${name} (${key})`);
 
     return instance;
   }
@@ -311,7 +312,7 @@ export class MFSandboxBridge {
     const module = remoteModules[0]?.chunk;
     let lifecycle: SubAppLifecycle = {
       mount: () => {
-        console.warn(`[orion-mf] Default mount called for "${key}" - no lifecycle found`);
+        logger.warn('MFSandboxBridge', `Default mount called for "${key}" - no lifecycle found`);
       },
     };
 
@@ -319,18 +320,18 @@ export class MFSandboxBridge {
       let exports = module;
 
       // Debug: log module structure
-      console.log(`[orion-mf][initLifecycle] ${key} - module keys:`, typeof exports === 'object' ? Object.keys(exports).slice(0, 10).join(', ') + '...' : typeof exports);
-      console.log(`[orion-mf][initLifecycle] ${key} - __esModule:`, exports?.__esModule);
-      console.log(`[orion-mf][initLifecycle] ${key} - has mount/bootstrap/unmount:`, !!(exports as any)?.mount, !!(exports as any)?.bootstrap, !!(exports as any)?.unmount);
-      console.log(`[orion-mf][initLifecycle] ${key} - default type:`, typeof (exports as any)?.default);
+      logger.debug('MFSandboxBridge', `[initLifecycle] ${key} - module keys:`, typeof exports === 'object' ? Object.keys(exports).slice(0, 10).join(', ') + '...' : typeof exports);
+      logger.debug('MFSandboxBridge', `[initLifecycle] ${key} - __esModule:`, exports?.__esModule);
+      logger.debug('MFSandboxBridge', `[initLifecycle] ${key} - has mount/bootstrap/unmount:`, { mount: !!(exports as any)?.mount, bootstrap: !!(exports as any)?.bootstrap, unmount: !!(exports as any)?.unmount });
+      logger.debug('MFSandboxBridge', `[initLifecycle] ${key} - default type:`, typeof (exports as any)?.default);
 
       if (exports?.__esModule) {
         const hasLifecycle = (exports as any).bootstrap || (exports as any).mount || (exports as any).unmount;
         if (!hasLifecycle) {
-          console.log(`[orion-mf][initLifecycle] ${key} - no lifecycle on __esModule, unwrapping .default`);
+          logger.debug('MFSandboxBridge', `[initLifecycle] ${key} - no lifecycle on __esModule, unwrapping .default`);
           exports = exports.default ?? exports;
         } else {
-          console.log(`[orion-mf][initLifecycle] ${key} - lifecycle found on __esModule, keeping as-is`);
+          logger.debug('MFSandboxBridge', `[initLifecycle] ${key} - lifecycle found on __esModule, keeping as-is`);
         }
       }
 
@@ -341,13 +342,13 @@ export class MFSandboxBridge {
         typeof exports.default !== 'function' &&
         !(exports as any).bootstrap && !(exports as any).mount && !(exports as any).unmount
       ) {
-        console.log(`[orion-mf][initLifecycle] ${key} - unwrapping UMD compat .default`);
+        logger.debug('MFSandboxBridge', `[initLifecycle] ${key} - unwrapping UMD compat .default`);
         exports = exports.default;
       }
 
       if (typeof exports === 'object' && exports !== null) {
         const { bootstrap, mount, unmount } = exports as any;
-        console.log(`[orion-mf][initLifecycle] ${key} - extracted mount:`, typeof mount, 'bootstrap:', typeof bootstrap);
+        logger.debug('MFSandboxBridge', `[initLifecycle] ${key} - extracted mount:`, { mountType: typeof mount, bootstrapType: typeof bootstrap });
 
         lifecycle = {
           bootstrap: bootstrap ? this.bindLifecycle(bootstrap, ctx, key) : undefined,
@@ -355,13 +356,13 @@ export class MFSandboxBridge {
           unmount: unmount ? this.bindLifecycle(unmount, ctx, key) : undefined,
         };
       } else if (typeof exports === 'function') {
-        console.log(`[orion-mf][initLifecycle] ${key} - exports is function, using as mount`);
+        logger.debug('MFSandboxBridge', `[initLifecycle] ${key} - exports is function, using as mount`);
         lifecycle = {
           mount: this.bindLifecycle(exports, ctx, key),
         };
       }
     } else {
-      console.warn(`[orion-mf][initLifecycle] ${key} - no module found`);
+      logger.warn('MFSandboxBridge', `[initLifecycle] ${key} - no module found`);
     }
 
     return lifecycle;
@@ -379,14 +380,14 @@ export class MFSandboxBridge {
   ): (...args: any[]) => any {
     return (...args: any[]) => {
       try {
-        console.log(`[orion-mf] bindLifecycle executing for "${key}", args count:`, args.length);
+        logger.debug('MFSandboxBridge', `bindLifecycle executing for "${key}", args count:`, args.length);
         // Activate sandbox before executing lifecycle
         GlobalWrapper.activateSandbox(key);
 
         // Bind function to sandbox context
         return fn.apply(ctx, args);
       } catch (error) {
-        console.error(`[orion-mf] Error in lifecycle for "${key}":`, error);
+        logger.error('MFSandboxBridge', `Error in lifecycle for "${key}":`, error);
         throw error;
       } finally {
         // Deactivate sandbox after execution
@@ -419,14 +420,14 @@ export class MFSandboxBridge {
         }
       } catch (e) {
         // Cross-origin stylesheet, skip
-        console.warn(`[orion-mf] Skipping cross-origin stylesheet:`, sheet.href);
+        logger.warn('MFSandboxBridge', `Skipping cross-origin stylesheet:`, sheet.href);
       }
     }
 
     // Apply all collected stylesheets to the shadow root
     if (styleSheets.length > 0) {
       shadowRoot.adoptedStyleSheets = [...styleSheets];
-      console.log(`[orion-mf] Injected ${styleSheets.length} global stylesheets into Shadow DOM`);
+      logger.info('MFSandboxBridge', `Injected ${styleSheets.length} global stylesheets into Shadow DOM`);
     }
   }
 
@@ -480,7 +481,7 @@ export class MFSandboxBridge {
     // 防御性检查：如果已存在同名的容器，直接返回（防止重复挂载）
     const existingContainer = document.getElementById(`orion-mf-container-${key}`);
     if (existingContainer) {
-      console.warn(`[orion-mf] Container already exists for "${key}", reusing existing instance`);
+      logger.warn('MFSandboxBridge', `Container already exists for "${key}", reusing existing instance`);
       // For shadow-dom mode return the ShadowRoot; for scoped-css return the container
       return existingContainer.shadowRoot || existingContainer;
     }
@@ -518,7 +519,7 @@ export class MFSandboxBridge {
     }
 
     // Run mount with props (including basename)
-    console.log(`[orion-mf] mountToShadowDOM calling lifecycle.mount with props:`, props);
+    logger.debug('MFSandboxBridge', `mountToShadowDOM calling lifecycle.mount with props:`, props);
     lifecycle.mount(root as unknown as HTMLElement, props);
 
     // Track styles added during mount
@@ -541,7 +542,7 @@ export class MFSandboxBridge {
     // 防御性检查：如果已存在同名的容器，直接返回（防止重复挂载）
     const existingContainer = document.getElementById(`orion-mf-container-${key}`);
     if (existingContainer) {
-      console.warn(`[orion-mf] DOM container already exists for "${key}", reusing existing instance`);
+      logger.warn('MFSandboxBridge', `DOM container already exists for "${key}", reusing existing instance`);
       return existingContainer;
     }
 
@@ -559,7 +560,7 @@ export class MFSandboxBridge {
     }
 
     // Run mount with props (including basename)
-    console.log(`[orion-mf] mountToDOM calling lifecycle.mount with props:`, props);
+    logger.debug('MFSandboxBridge', `mountToDOM calling lifecycle.mount with props:`, props);
     lifecycle.mount(container, props);
 
     // Track styles added during mount
@@ -631,11 +632,11 @@ export class MFSandboxBridge {
   async destroy(key: string): Promise<void> {
     const instance = this.instances.get(key);
     if (!instance) {
-      console.warn(`[orion-mf] Sub-app "${key}" not found, nothing to destroy`);
+      logger.warn('MFSandboxBridge', `Sub-app "${key}" not found, nothing to destroy`);
       return;
     }
 
-    console.info(`[orion-mf] Destroying sub-app: ${key}`);
+    logger.info('MFSandboxBridge', `Destroying sub-app: ${key}`);
 
     // Run unmount lifecycle
     try {
@@ -645,7 +646,7 @@ export class MFSandboxBridge {
         await instance.lifecycle.unmount();
       }
     } catch (error) {
-      console.error(`[orion-mf] Error during unmount for "${key}":`, error);
+      logger.error('MFSandboxBridge', `Error during unmount for "${key}":`, error);
     }
 
     // Always deactivate sandbox regardless of whether unmount lifecycle exists
@@ -662,7 +663,7 @@ export class MFSandboxBridge {
         instance.root.remove();
       }
     } catch (error) {
-      console.error(`[orion-mf] Error during DOM cleanup for "${key}":`, error);
+      logger.error('MFSandboxBridge', `Error during DOM cleanup for "${key}":`, error);
     }
 
     // Cleanup resources
@@ -671,7 +672,7 @@ export class MFSandboxBridge {
     // Remove instance
     this.instances.delete(key);
 
-    console.info(`[orion-mf] Sub-app destroyed: ${key}`);
+    logger.info('MFSandboxBridge', `Sub-app destroyed: ${key}`);
   }
 
   /**
@@ -680,7 +681,7 @@ export class MFSandboxBridge {
   async destroyAll(): Promise<void> {
     const keys = Array.from(this.instances.keys());
     await Promise.all(keys.map((key) => this.destroy(key)));
-    console.info('[orion-mf] All sub-apps destroyed');
+    logger.info('MFSandboxBridge', 'All sub-apps destroyed');
   }
 }
 

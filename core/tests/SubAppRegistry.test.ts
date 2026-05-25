@@ -338,7 +338,7 @@ describe('SubAppRegistry Module', () => {
       const testRegistry = new SubAppRegistry();
       await testRegistry.fetchRemote();
 
-      expect(consoleWarnSpy).toHaveBeenCalledWith('[SubAppRegistry] No remoteUrl configured');
+      expect(consoleWarnSpy).toHaveBeenCalledWith('[orion-mf] SubAppRegistry: No remoteUrl configured');
 
       consoleWarnSpy.mockRestore();
     });

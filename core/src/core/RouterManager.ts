@@ -4,6 +4,8 @@
  * 负责微前端的路由同步、浏览器前进/后退、URL 编码管理
  */
 
+import { logger } from './logger';
+
 // ============================================================================
 // Types
 // ============================================================================
@@ -98,7 +100,7 @@ export class RouterManager {
    */
   register(config: RouteConfig): void {
     if (!config.key) {
-      console.warn('[RouterManager] Cannot register route without key');
+      logger.warn('RouterManager', 'Cannot register route without key');
       return;
     }
     this.routes.set(config.key, config);
@@ -120,7 +122,7 @@ export class RouterManager {
    */
   init(onChange: RouteChangeCallback): void {
     if (this.initialized) {
-      console.warn('[RouterManager] Already initialized');
+      logger.warn('RouterManager', 'Already initialized');
       return;
     }
 
@@ -160,7 +162,7 @@ export class RouterManager {
   navigate(appKey: string, appPath: string, replace = false): void {
     const route = this.routes.get(appKey);
     if (!route) {
-      console.warn(`[RouterManager] Unknown app: ${appKey}`);
+      logger.warn('RouterManager', `Unknown app: ${appKey}`);
       return;
     }
 
@@ -313,7 +315,7 @@ export class RouterManager {
     // 检查路由是否注册
     const route = this.routes.get(appKey);
     if (!route) {
-      console.warn(`[RouterManager] No route registered for app: ${appKey}`);
+      logger.warn('RouterManager', `No route registered for app: ${appKey}`);
       return null;
     }
 

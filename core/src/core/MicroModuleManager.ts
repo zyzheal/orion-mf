@@ -4,6 +4,8 @@
  * 实现比子应用更细粒度的模块共享
  */
 
+import { logger } from './logger';
+
 // ============================================================================
 // Types
 // ============================================================================
@@ -73,7 +75,7 @@ export class MicroModuleManager {
    */
   register(config: MicroModuleConfig): void {
     this.config.set(config.key, config);
-    console.log(`[MicroModule] Registered: ${config.key}`);
+    logger.info('MicroModule', `Registered: ${config.key}`);
   }
 
   /**
@@ -225,7 +227,7 @@ export class MicroModuleManager {
       try {
         instance.renderResult.root.unmount();
       } catch (e) {
-        console.warn(`[MicroModule] Error unmounting React root for "${key}":`, e);
+        logger.warn('MicroModule', `Error unmounting React root for "${key}":`, e);
       }
       // 移除 DOM wrapper
       try {
@@ -236,7 +238,7 @@ export class MicroModuleManager {
     }
 
     this.modules.delete(key);
-    console.log(`[MicroModule] Unmounted: ${key}`);
+    logger.info('MicroModule', `Unmounted: ${key}`);
   }
 
   /**

@@ -121,7 +121,7 @@ describe('RouterManager', () => {
       const warnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {});
       router.init(() => {});
 
-      expect(warnSpy).toHaveBeenCalledWith('[RouterManager] Already initialized');
+      expect(warnSpy).toHaveBeenCalledWith('[orion-mf] RouterManager: Already initialized');
       warnSpy.mockRestore();
     });
 
@@ -172,7 +172,7 @@ describe('RouterManager', () => {
       router.init(() => {});
       router.navigate('unknown-app', '/path');
 
-      expect(warnSpy).toHaveBeenCalledWith('[RouterManager] Unknown app: unknown-app');
+      expect(warnSpy).toHaveBeenCalledWith('[orion-mf] RouterManager: Unknown app: unknown-app');
       warnSpy.mockRestore();
     });
 

@@ -24,6 +24,7 @@ import { MFSandboxBridge } from './MFSandboxBridge';
 import type { SubAppConfig } from './MFSandboxBridge';
 import { GlobalWrapper } from './Sandbox';
 import { StyleIsolator } from './StyleIsolator';
+import { logger } from './logger';
 
 // ============================================================================
 // Type Definitions
@@ -144,8 +145,9 @@ export class PerformanceBenchmark {
     config: BenchmarkConfig = {}
   ) {
     if (typeof process !== 'undefined' && process.env?.NODE_ENV === 'production') {
-      console.warn(
-        '[Benchmark] PerformanceBenchmark is a DEV-ONLY module and should not be used in production builds.'
+      logger.warn(
+        'Benchmark',
+        'PerformanceBenchmark is a DEV-ONLY module and should not be used in production builds.'
       );
     }
     this.degradation = degradation;
@@ -348,8 +350,9 @@ export class PerformanceBenchmark {
 
         if (this.config.enableWarnings) {
           const unit = key === 'memoryUsage' ? 'bytes' : 'ms';
-          console.warn(
-            `[Benchmark] ${key} exceeds threshold: ${value.toFixed(2)}${unit} > ${threshold}${unit}`
+          logger.warn(
+            'Benchmark',
+            `${key} exceeds threshold: ${value.toFixed(2)}${unit} > ${threshold}${unit}`
           );
         }
       }

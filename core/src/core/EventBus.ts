@@ -1,5 +1,6 @@
+import { logger } from './logger';
+
 /**
- * EventBus - 带版本控制的跨子应用通信模块
  *
  * 提供基于 Channel 的事件通信机制，支持版本控制，
  * 用于微前端架构中子应用之间的解耦通信。
@@ -149,7 +150,7 @@ class Channel implements ChannelPublicAPI {
           version: this.version,
         });
       } catch (e) {
-        console.error(`[EventBus] Handler error for event "${event}":`, e);
+        logger.error('EventBus', `Handler error for event "${event}"`, e);
       }
     }
   }

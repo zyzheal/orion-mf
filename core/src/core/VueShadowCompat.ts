@@ -11,6 +11,8 @@ type Vue3App = {
   config: { globalProperties: Record<string, any> };
 };
 
+import { logger } from './logger';
+
 // ============================================================================
 // Types
 // ============================================================================
@@ -131,7 +133,7 @@ export class VueShadowCompat {
   unmount(key: string): void {
     const appInstance = this.apps.get(key);
     if (!appInstance) {
-      console.warn(`[VueShadowCompat] App ${key} not found`);
+      logger.warn('VueShadowCompat', `App ${key} not found`);
       return;
     }
 

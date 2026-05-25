@@ -1,3 +1,5 @@
+import { logger } from './logger';
+
 /**
  * SubAppCache - 子应用缓存/Keep-Alive 管理
  *
@@ -253,7 +255,7 @@ export class SubAppCache {
           entry.container.style.display = '';
         }
       } catch (e) {
-        console.warn(`[SubAppCache] Failed to purge ${key}:`, e);
+        logger.warn('SubAppCache', `Failed to purge ${key}`, e);
       }
     }
   }

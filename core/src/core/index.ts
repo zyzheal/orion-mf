@@ -17,6 +17,9 @@ export {
   DENYLIST,
 } from "./Sandbox";
 
+export { logger } from "./logger";
+export type { LogLevel, Logger } from "./logger";
+
 export {
   SandboxProxy,
 } from "./Sandbox";

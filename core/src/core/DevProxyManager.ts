@@ -4,6 +4,8 @@
  * 用于开发时将子应用入口替换为本地开发服务器地址
  */
 
+import { logger } from './logger';
+
 // ============================================================================
 // Types
 // ============================================================================
@@ -103,12 +105,12 @@ export class DevProxyManager {
    */
   register(appKey: string, localEntry: string): void {
     if (!appKey) {
-      console.warn('[DevProxyManager] Cannot register proxy without appKey');
+      logger.warn('DevProxyManager', 'Cannot register proxy without appKey');
       return;
     }
 
     if (!localEntry) {
-      console.warn('[DevProxyManager] Cannot register proxy without localEntry');
+      logger.warn('DevProxyManager', 'Cannot register proxy without localEntry');
       return;
     }
 
@@ -128,7 +130,7 @@ export class DevProxyManager {
    */
   unregister(appKey: string): void {
     if (!appKey) {
-      console.warn('[DevProxyManager] Cannot unregister proxy without appKey');
+      logger.warn('DevProxyManager', 'Cannot unregister proxy without appKey');
       return;
     }
 
@@ -232,7 +234,7 @@ export class DevProxyManager {
       }
     } catch (e) {
       // 跨域环境下可能无法访问 window，忽略错误
-      console.debug('[DevProxyManager] Cannot access window.__ORIONMF_PROXY_LIST__:', e);
+      logger.debug('DevProxyManager', 'Cannot access window.__ORIONMF_PROXY_LIST__:', e);
     }
     return {};
   }
@@ -244,7 +246,7 @@ export class DevProxyManager {
     try {
       (window as unknown as { __ORIONMF_PROXY_LIST__?: ProxyList }).__ORIONMF_PROXY_LIST__ = { ...this.proxyList };
     } catch (e) {
-      console.debug('[DevProxyManager] Cannot write to window.__ORIONMF_PROXY_LIST__:', e);
+      logger.debug('DevProxyManager', 'Cannot write to window.__ORIONMF_PROXY_LIST__:', e);
     }
   }
 

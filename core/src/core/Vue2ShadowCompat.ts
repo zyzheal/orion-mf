@@ -9,6 +9,8 @@ type Vue2Constructor = {
   version: string;
 };
 
+import { logger } from './logger';
+
 // ============================================================================
 // Types
 // ============================================================================
@@ -135,7 +137,7 @@ export class Vue2ShadowCompat {
   unmount(key: string): void {
     const appInstance = this.apps.get(key);
     if (!appInstance) {
-      console.warn(`[Vue2ShadowCompat] App ${key} not found`);
+      logger.warn('Vue2ShadowCompat', `App ${key} not found`);
       return;
     }
 

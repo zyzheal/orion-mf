@@ -5,6 +5,7 @@
  * Reference: docs/superpowers/specs/2026-05-20-orionmf-v2-design.md §4.2.6
  */
 
+import { logger } from './logger';
 import type { SandboxConfig } from './interface';
 
 // ============================================================================
@@ -164,8 +165,9 @@ export class SecurityPolicyManager {
   applyPreset(appKey: string, preset: PresetKey): void {
     const presetPolicy = PRESETS[preset];
     if (!presetPolicy) {
-      console.warn(
-        `[orion-mf:SecurityPolicyManager] Unknown preset: ${preset}, using 'strict'`
+      logger.warn(
+        'SecurityPolicyManager',
+        `Unknown preset: ${preset}, using 'strict'`
       );
       this.policies.set(appKey, clonePolicy(PRESETS.strict));
     } else {

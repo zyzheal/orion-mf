@@ -5,6 +5,7 @@
  */
 
 import { globalStore } from './GlobalStore';
+import { logger } from './logger';
 
 // ============================================================================
 // Type Definitions
@@ -96,8 +97,9 @@ export class SubAppDataChannel {
         success.push(key);
       } else {
         denied.push(key);
-        console.warn(
-          `[DataChannel] ${this.appKey} 无权修改状态 "${key}"，` +
+        logger.warn(
+          'SubAppDataChannel',
+          `${this.appKey} 无权修改状态 "${key}"，` +
           `允许的范围: ${[...this.allowedKeys].join(', ')}`
         );
       }

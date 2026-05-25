@@ -8,6 +8,8 @@
  * - 定时器管理：memoryMonitors Map 单独管理，cleanup 时 clearInterval
  */
 
+import { logger } from './logger';
+
 export interface LeakContext {
   /** 子应用 key */
   key: string;
@@ -210,7 +212,7 @@ export class LeakPrevention {
   private startMemoryMonitor(key: string): void {
     // 仅 Chromium 支持 performance.memory
     if (!hasMemoryAPI()) {
-      console.warn(`[LeakPrevention] ${key}: performance.memory not supported, using fallback monitor`);
+      logger.warn('LeakPrevention', `${key}: performance.memory not supported, using fallback monitor`);
       this.startFallbackMonitor(key);
       return;
     }
@@ -219,8 +221,9 @@ export class LeakPrevention {
       const stats = getMemoryStats(this.memoryThreshold);
       if (stats) {
         if (stats.isOverThreshold) {
-          console.warn(
-            `[LeakPrevention] ${key}: memory exceeds ${this.memoryThreshold / 1024 / 1024}MB threshold ` +
+          logger.warn(
+            'LeakPrevention',
+            `${key}: memory exceeds ${this.memoryThreshold / 1024 / 1024}MB threshold ` +
             `(${Math.round(stats.usedJSHeapSize / 1024 / 1024)}MB / ${Math.round(stats.jsHeapSizeLimit / 1024 / 1024)}MB)`
           );
           this.onMemoryWarning?.(key, stats);
@@ -260,8 +263,9 @@ export class LeakPrevention {
 
       // 检查间隔是否异常长（可能存在 GC 暂停或内存压力）
       if (elapsed > this.memoryCheckInterval * 2) {
-        console.warn(
-          `[LeakPrevention] ${key}: fallback monitor detected unusual delay (${Math.round(elapsed)}ms), ` +
+        logger.warn(
+          'LeakPrevention',
+          `${key}: fallback monitor detected unusual delay (${Math.round(elapsed)}ms), ` +
           `possible memory pressure`
         );
         this.onMemoryWarning?.(key, {

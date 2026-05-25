@@ -4,6 +4,7 @@
  * Design: docs/superpowers/specs/2026-05-20-orionmf-v2-design.md §3.2
  */
 
+import { logger } from './logger';
 import { SandBoxType } from './interface';
 import type { SandBox } from './interface';
 
@@ -140,10 +141,12 @@ const ESCAPE_TO_GLOBAL: PropertyKey[] = [
 // ============================================================================
 
 /**
- * Use new Function to get the native global this
- * This is safer than using window directly in sandbox context
+ * Native global reference (globalThis)
+ *
+ * Previously used new Function('return this')() which is blocked by strict CSP.
+ * globalThis is standard since ES2020 and compatible with our esnext target.
  */
-export const nativeGlobal = new Function('return this')();
+export const nativeGlobal = globalThis;
 
 /**
  * Check if a function is a bound function (created with .bind())
@@ -440,7 +443,7 @@ export class Sandbox implements SandBox {
         try {
           (this as any).proxy[key] = value;
         } catch (e) {
-          console.warn(`[orion-mf] Failed to apply pending write for "${String(key)}":`, e);
+          logger.warn('Sandbox', `Failed to apply pending write for "${String(key)}"`, e);
         }
       }
       this.pendingWrites.clear();
@@ -453,10 +456,8 @@ export class Sandbox implements SandBox {
    */
   inactive(): void {
     if (process.env.NODE_ENV === 'development') {
-      console.info(
-        `[orion-mf:sandbox] ${this.name} modified global properties restore...`,
-        [...this.updatedValueSet.keys()]
-      );
+      logger.debug('Sandbox', `${this.name} modified global properties restore...`,
+        [...this.updatedValueSet.keys()]);
     }
 
     if (--activeSandboxCount === 0) {
@@ -534,9 +535,8 @@ export class Sandbox implements SandBox {
         sandbox.pendingWrites.set(p, value);
 
         if (process.env.NODE_ENV === 'development') {
-          console.warn(
-            `[orion-mf] Set window.${String(p)} while sandbox inactive in ${name}, queued for next activation`
-          );
+          logger.warn('Sandbox',
+            `Set window.${String(p)} while sandbox inactive in ${name}, queued for next activation`);
         }
 
         return true;
@@ -820,17 +820,13 @@ export function createScopedStorage(
     get(_target, prop): unknown {
       // Handle __proto__ specially - return undefined to block prototype pollution
       if (prop === '__proto__' || prop === 'constructor') {
-        console.warn(
-          `[orion-mf:sandbox] Blocked access to '${String(prop)}' in scoped storage for "${sandboxKey}"`
-        );
+        logger.warn('Sandbox', `Blocked access to '${String(prop)}' in scoped storage for "${sandboxKey}"`);
         return undefined;
       }
 
       // Check denylist
       if (DENYLIST.has(prop)) {
-        console.warn(
-          `[orion-mf:sandbox] Blocked access to '${String(prop)}' in scoped storage for "${sandboxKey}"`
-        );
+        logger.warn('Sandbox', `Blocked access to '${String(prop)}' in scoped storage for "${sandboxKey}"`);
         return undefined;
       }
 
@@ -840,18 +836,14 @@ export function createScopedStorage(
     set(_target, prop, value): boolean {
       // Handle __proto__ and constructor specially
       if (prop === '__proto__' || prop === 'constructor') {
-        console.warn(
-          `[orion-mf:sandbox] Blocked access to '${String(prop)}' in scoped storage for "${sandboxKey}"`
-        );
+        logger.warn('Sandbox', `Blocked access to '${String(prop)}' in scoped storage for "${sandboxKey}"`);
         // Return true but don't actually set to avoid errors
         return true;
       }
 
       // Check denylist
       if (DENYLIST.has(prop)) {
-        console.warn(
-          `[orion-mf:sandbox] Blocked access to '${String(prop)}' in scoped storage for "${sandboxKey}"`
-        );
+        logger.warn('Sandbox', `Blocked access to '${String(prop)}' in scoped storage for "${sandboxKey}"`);
         return false;
       }
 

@@ -10,6 +10,8 @@
  * - Independent ErrorBoundary per sub-app
  */
 
+import { logger } from './logger';
+
 // ============================================================================
 // Type Definitions
 // ============================================================================
@@ -53,7 +55,7 @@ class ErrorBoundaryImpl implements ErrorBoundary {
 
   capture(error: Error): void {
     if (process.env.NODE_ENV === 'development') {
-      console.error(`[orion-mf:error-isolator] Error captured from sub-app "${this.key}":`, error);
+      logger.error('ErrorIsolator', `Error captured from sub-app "${this.key}":`, error);
     }
     this.onError(error);
   }
@@ -133,7 +135,7 @@ export class ErrorIsolator {
     this.errorBoundaries.set(key, boundary);
 
     if (process.env.NODE_ENV === 'development') {
-      console.log(`[orion-mf:error-isolator] Setup error boundary for "${key}"`);
+      logger.info('ErrorIsolator', `Setup error boundary for "${key}"`);
     }
 
     return boundary;
@@ -251,7 +253,7 @@ export class ErrorIsolator {
     const removed = this.errorBoundaries.delete(key);
 
     if (process.env.NODE_ENV === 'development' && removed) {
-      console.log(`[orion-mf:error-isolator] Removed error boundary for "${key}"`);
+      logger.info('ErrorIsolator', `Removed error boundary for "${key}"`);
     }
   }
 
@@ -303,7 +305,7 @@ export class ErrorIsolator {
       isolatorInstance = null;
 
       if (process.env.NODE_ENV === 'development') {
-        console.log('[orion-mf:error-isolator] Global listeners removed');
+        logger.info('ErrorIsolator', 'Global listeners removed');
       }
     }
   }

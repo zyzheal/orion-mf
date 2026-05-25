@@ -7,6 +7,8 @@
  * - 定期上报：setInterval，默认 30s
  */
 
+import { logger } from './logger';
+
 export interface SubAppMetrics {
   /** 子应用唯一标识 */
   key: string;
@@ -267,7 +269,7 @@ export class ObservabilityManager {
         try {
           await exporter(metrics);
         } catch (e) {
-          console.error('[Observability] Export failed:', e);
+          logger.error('Observability', 'Export failed', e);
         }
       }
     }, interval);
@@ -286,7 +288,7 @@ export class ObservabilityManager {
       try {
         await exporter(metrics);
       } catch (e) {
-        console.error('[Observability] Export failed:', e);
+        logger.error('Observability', 'Export failed', e);
       }
     });
 

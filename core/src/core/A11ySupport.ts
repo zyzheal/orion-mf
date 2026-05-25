@@ -9,6 +9,8 @@
  * Reference: docs/superpowers/specs/2026-05-20-orionmf-v2-design.md §4.4
  */
 
+import { logger } from './logger';
+
 // ============================================================================
 // Type Definitions
 // ============================================================================
@@ -79,7 +81,7 @@ export class A11ySupport {
       this.setupScreenReader(key, container);
     }
 
-    console.info(`[A11y] Setup complete for "${key}"`);
+    logger.info('A11y', `Setup complete for "${key}"`);
   }
 
   /**
@@ -101,7 +103,7 @@ export class A11ySupport {
     const lastFocusable = focusable[focusable.length - 1] ?? null;
 
     if (!firstFocusable || !lastFocusable) {
-      console.warn(`[A11y] No focusable elements found in container "${key}"`);
+      logger.warn('A11y', `No focusable elements found in container "${key}"`);
       return;
     }
 
@@ -132,7 +134,7 @@ export class A11ySupport {
       keydownHandler,
     });
 
-    console.info(`[A11y] Focus trap enabled for "${key}"`);
+    logger.info('A11y', `Focus trap enabled for "${key}"`);
   }
 
   /**
@@ -166,7 +168,7 @@ export class A11ySupport {
     container.appendChild(sr);
     this.srElementMap.set(key, sr);
 
-    console.info(`[A11y] Screen reader region enabled for "${key}"`);
+    logger.info('A11y', `Screen reader region enabled for "${key}"`);
   }
 
   /**
@@ -204,7 +206,7 @@ export class A11ySupport {
     if (state) {
       state.container.removeEventListener('keydown', state.keydownHandler);
       this.focusTrapMap.delete(key);
-      console.info(`[A11y] Focus trap removed for "${key}"`);
+      logger.info('A11y', `Focus trap removed for "${key}"`);
     }
   }
 
@@ -218,7 +220,7 @@ export class A11ySupport {
     if (sr) {
       sr.remove();
       this.srElementMap.delete(key);
-      console.info(`[A11y] Screen reader region removed for "${key}"`);
+      logger.info('A11y', `Screen reader region removed for "${key}"`);
     }
   }
 
@@ -230,7 +232,7 @@ export class A11ySupport {
   remove(key: string): void {
     this.removeFocusTrap(key);
     this.removeScreenReader(key);
-    console.info(`[A11y] All features removed for "${key}"`);
+    logger.info('A11y', `All features removed for "${key}"`);
   }
 
   /**
@@ -264,7 +266,7 @@ export class A11ySupport {
       this.removeScreenReader(key);
     });
 
-    console.info('[A11y] Destroyed');
+    logger.info('A11y', 'Destroyed');
   }
 }
 

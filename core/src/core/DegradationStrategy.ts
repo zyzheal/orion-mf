@@ -11,6 +11,7 @@
  */
 
 import { MFSandboxBridge } from './MFSandboxBridge';
+import { logger } from './logger';
 import type { SubAppConfig, SubAppInstance } from './MFSandboxBridge';
 
 // ============================================================================
@@ -111,7 +112,7 @@ export class DegradationStrategy {
     // Determine starting level
     const startLevel = this.getStartLevel();
     const startPriority = this.getLevelPriority(startLevel);
-    console.info(`[Degradation] Starting from level: ${startLevel}`);
+    logger.info('Degradation', `Starting from level: ${startLevel}`);
 
     // Level 1: Full mode (MF + Proxy + Shadow DOM)
     if (startPriority <= this.getLevelPriority(DegradationLevel.Full)) {
@@ -120,7 +121,7 @@ export class DegradationStrategy {
         this.setLevel(config.key, DegradationLevel.Full);
         return instance;
       } catch (error) {
-        console.warn(`[Degradation] Full mode failed, trying compatible...`, error);
+        logger.warn('Degradation', `Full mode failed, trying compatible...`, error);
         this.handleDegradation(error as Error, DegradationLevel.Full, DegradationLevel.Compatible);
       }
     }
@@ -132,7 +133,7 @@ export class DegradationStrategy {
         this.setLevel(config.key, DegradationLevel.Compatible);
         return instance;
       } catch (error) {
-        console.warn(`[Degradation] Compatible mode failed, trying iframe...`, error);
+        logger.warn('Degradation', `Compatible mode failed, trying iframe...`, error);
         this.handleDegradation(error as Error, DegradationLevel.Compatible, DegradationLevel.Iframe);
       }
     }
@@ -144,7 +145,7 @@ export class DegradationStrategy {
         this.setLevel(config.key, DegradationLevel.Iframe);
         return instance;
       } catch (error) {
-        console.warn(`[Degradation] iframe mode failed, using fallback...`, error);
+        logger.warn('Degradation', `iframe mode failed, using fallback...`, error);
         this.handleDegradation(error as Error, DegradationLevel.Iframe, DegradationLevel.Fallback);
       }
     }
@@ -268,16 +269,16 @@ export class DegradationStrategy {
       sandbox: this.createIframeSandbox(iframe),
       lifecycle: {
         mount: () => {
-          console.info(`[Degradation] iframe mode: ${config.name} mounted`);
+          logger.info('Degradation', `iframe mode: ${config.name} mounted`);
         },
         unmount: () => {
-          console.info(`[Degradation] iframe mode: ${config.name} unmounted`);
+          logger.info('Degradation', `iframe mode: ${config.name} unmounted`);
         },
       },
       destroy: () => this.destroyIframe(config.key),
     };
 
-    console.info(`[Degradation] iframe mode: ${config.name} loaded`);
+    logger.info('Degradation', `iframe mode: ${config.name} loaded`);
 
     return instance;
   }
@@ -309,7 +310,7 @@ export class DegradationStrategy {
     if (iframe) {
       iframe.remove();
       this.iframeTracker.delete(key);
-      console.info(`[Degradation] iframe for "${key}" destroyed`);
+      logger.info('Degradation', `iframe for "${key}" destroyed`);
     }
   }
 
@@ -339,16 +340,16 @@ export class DegradationStrategy {
       sandbox: this.createFallbackSandbox(fallbackElement),
       lifecycle: {
         mount: () => {
-          console.info(`[Degradation] Fallback: ${config.name} displayed`);
+          logger.info('Degradation', `Fallback: ${config.name} displayed`);
         },
         unmount: () => {
-          console.info(`[Degradation] Fallback: ${config.name} hidden`);
+          logger.info('Degradation', `Fallback: ${config.name} hidden`);
         },
       },
       destroy: () => this.destroyFallback(config.key),
     };
 
-    console.info(`[Degradation] Fallback: ${config.name} rendered`);
+    logger.info('Degradation', `Fallback: ${config.name} rendered`);
 
     return instance;
   }
@@ -400,7 +401,7 @@ export class DegradationStrategy {
     const element = document.getElementById(`orion-mf-fallback-${key}`);
     if (element) {
       element.remove();
-      console.info(`[Degradation] Fallback for "${key}" destroyed`);
+      logger.info('Degradation', `Fallback for "${key}" destroyed`);
     }
   }
 

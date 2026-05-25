@@ -9,6 +9,7 @@
  */
 
 import { SubAppStateMachine, type SubAppState } from './SubAppStateMachine';
+import { logger } from './logger';
 
 /**
  * 实例配置
@@ -132,7 +133,7 @@ export class MultiInstanceManager {
 
     // 检查实例是否已存在
     if (this.instances.has(instanceId)) {
-      console.warn(`[MultiInstanceManager] Instance ${instanceId} already exists, overwriting`);
+      logger.warn('MultiInstanceManager', `Instance ${instanceId} already exists, overwriting`);
       this.destroyInstance(instanceId);
     }
 
@@ -174,7 +175,7 @@ export class MultiInstanceManager {
     stateMachine.init(instanceId);
     this.stateMachines.set(instanceId, stateMachine);
 
-    console.log(`[MultiInstanceManager] Created instance ${instanceId} for app ${appKey}`);
+    logger.info('MultiInstanceManager', `Created instance ${instanceId} for app ${appKey}`);
 
     return instanceId;
   }
@@ -187,7 +188,7 @@ export class MultiInstanceManager {
   destroyInstance(instanceId: string): void {
     const instance = this.instances.get(instanceId);
     if (!instance) {
-      console.warn(`[MultiInstanceManager] Instance ${instanceId} not found`);
+      logger.warn('MultiInstanceManager', `Instance ${instanceId} not found`);
       return;
     }
 
@@ -209,7 +210,7 @@ export class MultiInstanceManager {
     // 删除实例
     this.instances.delete(instanceId);
 
-    console.log(`[MultiInstanceManager] Destroyed instance ${instanceId}`);
+    logger.info('MultiInstanceManager', `Destroyed instance ${instanceId}`);
   }
 
   /**
@@ -285,7 +286,7 @@ export class MultiInstanceManager {
       this.destroyInstance(id);
     }
 
-    console.log(`[MultiInstanceManager] Cleaned up ${count} instances for app ${appKey}`);
+    logger.info('MultiInstanceManager', `Cleaned up ${count} instances for app ${appKey}`);
 
     return count;
   }
@@ -422,7 +423,7 @@ export class MultiInstanceManager {
       }
 
       if (oldestInstanceId) {
-        console.log(`[MultiInstanceManager] Auto-cleanup: destroying oldest instance ${oldestInstanceId}`);
+        logger.info('MultiInstanceManager', `Auto-cleanup: destroying oldest instance ${oldestInstanceId}`);
         this.destroyInstance(oldestInstanceId);
       }
     }
@@ -438,7 +439,7 @@ export class MultiInstanceManager {
       this.cleanupApp(appKey);
     }
 
-    console.log('[MultiInstanceManager] Destroyed all instances');
+    logger.info('MultiInstanceManager', 'Destroyed all instances');
   }
 
   /**

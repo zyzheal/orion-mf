@@ -128,7 +128,7 @@ describe('DevProxyManager', () => {
 
       manager.register('', 'http://localhost:3002/remoteEntry.js');
 
-      expect(warnSpy).toHaveBeenCalledWith('[DevProxyManager] Cannot register proxy without appKey');
+      expect(warnSpy).toHaveBeenCalledWith('[orion-mf] DevProxyManager: Cannot register proxy without appKey');
       warnSpy.mockRestore();
     });
 
@@ -138,7 +138,7 @@ describe('DevProxyManager', () => {
 
       manager.register('pipeline', '');
 
-      expect(warnSpy).toHaveBeenCalledWith('[DevProxyManager] Cannot register proxy without localEntry');
+      expect(warnSpy).toHaveBeenCalledWith('[orion-mf] DevProxyManager: Cannot register proxy without localEntry');
       warnSpy.mockRestore();
     });
 
@@ -193,7 +193,7 @@ describe('DevProxyManager', () => {
 
       manager.unregister('');
 
-      expect(warnSpy).toHaveBeenCalledWith('[DevProxyManager] Cannot unregister proxy without appKey');
+      expect(warnSpy).toHaveBeenCalledWith('[orion-mf] DevProxyManager: Cannot unregister proxy without appKey');
       warnSpy.mockRestore();
     });
 

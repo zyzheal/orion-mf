@@ -9,6 +9,8 @@
  * - 环境适配：entry_dev / entry_prod 自动切换
  */
 
+import { logger } from './logger';
+
 /** 子应用注册配置 */
 export interface SubAppRegistration {
   /** 子应用唯一标识 */
@@ -72,7 +74,7 @@ export class SubAppRegistry {
    */
   register(config: SubAppRegistration): void {
     if (!config.key) {
-      console.warn('[SubAppRegistry] Cannot register app without key');
+      logger.warn('SubAppRegistry', 'Cannot register app without key');
       return;
     }
     this.apps.set(config.key, config);
@@ -170,14 +172,14 @@ export class SubAppRegistry {
     const { remoteUrl, cacheTTL, fetchFn } = this.config;
 
     if (!remoteUrl) {
-      console.warn('[SubAppRegistry] No remoteUrl configured');
+      logger.warn('SubAppRegistry', 'No remoteUrl configured');
       return;
     }
 
     // 检查缓存
     const now = Date.now();
     if (now - this.lastFetchTime < cacheTTL) {
-      console.log('[SubAppRegistry] Using cached config, skipping fetch');
+      logger.info('SubAppRegistry', 'Using cached config, skipping fetch');
       return;
     }
 
@@ -195,9 +197,9 @@ export class SubAppRegistry {
 
       this.registerBatch(configs);
       this.lastFetchTime = now;
-      console.log(`[SubAppRegistry] Successfully loaded ${configs.length} apps from remote`);
+      logger.info('SubAppRegistry', `Successfully loaded ${configs.length} apps from remote`);
     } catch (e) {
-      console.warn('[SubAppRegistry] Failed to fetch remote config:', e);
+      logger.warn('SubAppRegistry', 'Failed to fetch remote config:', e);
     }
   }
 
@@ -210,7 +212,7 @@ export class SubAppRegistry {
     const { remoteUrl, fetchFn } = this.config;
 
     if (!remoteUrl) {
-      console.warn('[SubAppRegistry] No remoteUrl configured');
+      logger.warn('SubAppRegistry', 'No remoteUrl configured');
       return false;
     }
 
@@ -230,10 +232,10 @@ export class SubAppRegistry {
       this.apps.clear();
       this.registerBatch(configs);
       this.lastFetchTime = Date.now();
-      console.log(`[SubAppRegistry] Successfully refreshed ${configs.length} apps from remote`);
+      logger.info('SubAppRegistry', `Successfully refreshed ${configs.length} apps from remote`);
       return true;
     } catch (e) {
-      console.warn('[SubAppRegistry] Failed to force refresh remote config:', e);
+      logger.warn('SubAppRegistry', 'Failed to force refresh remote config:', e);
       return false;
     }
   }

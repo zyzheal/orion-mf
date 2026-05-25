@@ -14,6 +14,8 @@
  * - WeakMap based deduplication to avoid repeated patching
  */
 
+import { logger } from './logger';
+
 // ============================================================================
 // Type Definitions
 // ============================================================================
@@ -328,7 +330,7 @@ export class RuntimeCSSPrefixer {
       );
 
       if (!originalDescriptor) {
-        console.warn('[RuntimeCSSPrefixer] Cannot get className descriptor');
+        logger.warn('RuntimeCSSPrefixer', 'Cannot get className descriptor');
         return;
       }
 
@@ -370,7 +372,7 @@ export class RuntimeCSSPrefixer {
 
       this.domSetterPatched = true;
     } catch (error) {
-      console.error('[RuntimeCSSPrefixer] Failed to patch DOM setter:', error);
+      logger.error('RuntimeCSSPrefixer', 'Failed to patch DOM setter:', error);
     }
   }
 
@@ -391,7 +393,7 @@ export class RuntimeCSSPrefixer {
       this.domSetterPatched = false;
       this.originalClassNameDescriptor = undefined;
     } catch (error) {
-      console.error('[RuntimeCSSPrefixer] Failed to restore DOM setter:', error);
+      logger.error('RuntimeCSSPrefixer', 'Failed to restore DOM setter:', error);
     }
   }
 

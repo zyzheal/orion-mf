@@ -5,6 +5,8 @@
  * 支持 5 种预加载模式：idle / visible / all / smart / manual
  */
 
+import { logger } from './logger';
+
 export type PrefetchMode = 'idle' | 'visible' | 'all' | 'smart' | 'manual';
 
 export interface PrefetchConfig {
@@ -171,7 +173,7 @@ export class PreloadStrategy {
       await loader();
       this.loaded.add(appKey);
     } catch (e) {
-      console.warn(`[Preload] Failed to prefetch ${appKey}:`, e);
+      logger.warn('Preload', `Failed to prefetch ${appKey}:`, e);
     } finally {
       this.loading.delete(appKey);
     }
@@ -219,7 +221,7 @@ export class PreloadStrategy {
     if (!container) {
       // 容器不存在说明子应用尚未渲染，跳过预加载
       // 这符合"可见时预加载"的语义
-      console.debug(`[Preload] ${appKey}: container not found, skipping visible prefetch`);
+      logger.debug('Preload', `${appKey}: container not found, skipping visible prefetch`);
       return Promise.resolve();
     }
 
