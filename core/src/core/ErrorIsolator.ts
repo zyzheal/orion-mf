@@ -79,7 +79,7 @@ class ErrorBoundaryImpl implements ErrorBoundary {
  * ```typescript
  * const isolator = new ErrorIsolator();
  * const boundary = isolator.setup('my-subapp', (error) => {
- *   console.error('Sub-app crashed:', error);
+ *   logger.error('MyApp', 'Sub-app crashed:', error);
  *   // Show fallback UI, etc.
  * });
  *

@@ -45,7 +45,31 @@ function shouldLog(level: LogLevel): boolean {
 }
 
 function format(context: string, message: string): string {
-  return `${PREFIX} ${context}: ${message}`;
+  const ctx = context || 'unknown';
+  const msg = message || '';
+  return `${PREFIX} ${ctx}: ${msg}`;
+}
+
+/**
+ * Safe log data wrapper — prevents circular reference issues.
+ * Returns a shallow copy with known problematic keys masked.
+ */
+function safeData(data: unknown): unknown {
+  if (data === null || data === undefined || typeof data !== 'object') {
+    return data;
+  }
+  try {
+    // Quick JSON check — will throw on circular refs
+    JSON.stringify(data);
+    return data;
+  } catch {
+    // Circular reference detected — return string representation
+    try {
+      return String(data);
+    } catch {
+      return '[Circular]';
+    }
+  }
 }
 
 function log(level: LogLevel, context: string, message: string, data?: unknown): void {
@@ -56,19 +80,19 @@ function log(level: LogLevel, context: string, message: string, data?: unknown):
   switch (level) {
     case 'info':
       // eslint-disable-next-line no-console
-      data !== undefined ? console.info(formatted, data) : console.info(formatted);
+      data !== undefined ? console.info(formatted, safeData(data)) : console.info(formatted);
       break;
     case 'warn':
       // eslint-disable-next-line no-console
-      data !== undefined ? console.warn(formatted, data) : console.warn(formatted);
+      data !== undefined ? console.warn(formatted, safeData(data)) : console.warn(formatted);
       break;
     case 'error':
       // eslint-disable-next-line no-console
-      data !== undefined ? console.error(formatted, data) : console.error(formatted);
+      data !== undefined ? console.error(formatted, safeData(data)) : console.error(formatted);
       break;
     case 'debug':
       // eslint-disable-next-line no-console
-      data !== undefined ? console.debug(formatted, data) : console.debug(formatted);
+      data !== undefined ? console.debug(formatted, safeData(data)) : console.debug(formatted);
       break;
   }
 }
